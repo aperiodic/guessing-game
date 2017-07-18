@@ -4,16 +4,6 @@
   (:require [clojure.string :as str]
             [guessing-game.prize :refer [prize]]))
 
-;; Tasks:
-;;   read from user: read-line
-;;   randomly pick a number 0 100:
-;;   compare user input to target number
-;;   tell user about the result
-;;   if the comparison is equal, tell the user they won, quit
-;;   if the user exceeds five guesses, tell them (condescendingly) they lost,
-;;      and what the number was, quit
-;;
-
 (defn complain-and-die!
   []
   (println "Failure to comply with instructions will be punished by (my) termination")
@@ -24,15 +14,19 @@
   (Thread/sleep 900)
   (System/exit 1))
 
-(defn get-guess
-  [lower-bound upper-bound]
-  (let [msg (format "What's your guess? (%d-%d): " lower-bound upper-bound)]
-    (print msg))
+(defn get-int
+  [msg]
+  (print msg)
   (flush)
   (try (-> (read-line)
          Long/parseLong)
     (catch NumberFormatException _
       (complain-and-die!))))
+
+(defn get-guess
+  [lower-bound upper-bound]
+  (let [msg (format "What's your guess? (%d-%d): " lower-bound upper-bound)]
+    (get-int msg)))
 
 (defn get-decision
   [description]
@@ -118,15 +112,50 @@
 (defn print-tutorial!
   [lower-bound upper-bound rounds]
   (println "This is a guessing game.")
-  (println "I will think of a number between" lower-bound "and" upper-bound
-           ", and then you have" rounds "chances to guess the number.")
+  (println "I will think of a number between" lower-bound "and" 
+          (str upper-bound ", and then you have") 
+          rounds "chances to guess the number.")
   (println "After each guess, I'll tell you whether your guess was high or low."))
+
+(defn log 
+  [x] 
+  (Math/log x))
+
+(defn log_2
+  [x]
+  (/ (log x) (log 2)))
+
+(defn min-chances
+  [upper-bound lower-bound]
+   (let [dist (- upper-bound lower-bound)]
+   (int (log_2 dist))))
+
+(defn get-level
+  []
+  (get-int "What level of difficulty would you like? (1-3): "))
+
+(defn level->difficulty
+  [input]
+  (cond
+    (= input 1) :easy
+    (= input 2) :moderate
+    (= input 3) :hard
+    :else complain-and-die!))
+
+(defn get-rounds
+  [hi lo]
+  (let [level (level->difficulty (get-level))]
+  (case level
+    :easy (inc (min-chances hi lo))
+    :moderate  (min-chances hi lo)
+    :hard (dec (min-chances hi lo)))))
 
 (defn -main
   [& args]
   (let [lo 0
         hi 100
-        chances 6]
+        chances (get-rounds hi lo)]
+
     (print-tutorial! lo hi chances)
     (new-game lo hi chances)
     (System/exit 0)))
